@@ -1,0 +1,132 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+## DV2 – HW2
+*CEU BA*
+
+*Ersan Kucukoglu - 1904225*
+
+`r format(Sys.time(), '%d %B, %Y')`
+
+### 0. Load the nycflights13 package and check what kind of datasets exist in the package, then create a copy of flights dataset into a data.table object, called flight_data.
+
+```{r,message=FALSE, warning=FALSE}
+#load the nycflights13 package
+library(nycflights13)
+#check datasets
+data(package='nycflights13')
+#flights dataset
+library(data.table)
+flight_data <- as.data.table(nycflights13::flights)
+```
+### 1. Which destination had the lowest avg arrival delay from LGA with minimum 100 flight to that destination?
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+flight_data[origin=="LGA", 
+            .(avg_arr_delay=mean(arr_delay,na.rm = TRUE), no_flights= .N), 
+            by=.(destination=dest)][no_flights >= 100][order(avg_arr_delay)][1]
+```
+
+### 2. Which destination's flights were the most on time (avg arrival delay closest to zero) from LGA with minimum 100 flight to that destination?
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+var1 <- flight_data[origin=="LGA", 
+                    .(avg_arr_delay=mean(arr_delay,na.rm = TRUE), no_flights= .N), 
+                    by=.(destination=dest)][no_flights >= 100]
+
+var1[avg_arr_delay %between% c(-1,1),][order(avg_arr_delay)][1]
+```
+
+### 3. Who is the manufacturer of the plane, which flights the most to CHS destination?
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+planes <- as.data.table(nycflights13::planes)
+df <- merge.data.table(flight_data,planes,by='tailnum')
+
+df[dest=="CHS",.(no_flight= .N),by=.(tailnum,manufacturer)][order(no_flight)][.N]
+```
+
+### 4. Which airline (carrier) flow the most by distance?
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+flight_data[,.(total_distance=sum(distance)),by="carrier"][order(total_distance)][.N]
+```
+
+### 5. Plot the monthly number of flights with 20+ mins arrival delay!
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+library(ggplot2)
+library(lubridate)
+q5 <- flight_data[arr_delay > 20, list(date = make_date(year, month))]
+p1 <- ggplot(q5, aes(x = date)) + geom_bar()+
+      labs(title = "Monthly number of flights with 20+ mins arrival delay",
+       subtitle = "20+ arrival delay",
+       x="Months", 
+       y= "Number of Flights")
+p1
+
+```
+
+### 6. Plot the departure delay of flights going to IAH and the related day's wind speed on a scaterplot! Is there any association between the two variables? Try adding a linear model.
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+weather <- as.data.table(nycflights13::weather)
+
+df2 <- merge(
+  flight_data[dest=="IAH",.(dest,dep_delay), by = .(year, month, day, origin)],
+  weather[, .(avg_wind_speed=mean(wind_speed,na.rm = T)), by = .(year, month, day, origin)],
+  by = c("year", "month", "day",  "origin"))
+ 
+p2 <- ggplot(df2, aes(x=dep_delay,y=avg_wind_speed))+geom_point()+
+  geom_smooth(method = 'lm',formula = y~x)+
+  labs(title = "Association between Departure delay and Wind Speed",
+       subtitle = "Destination : IAH",
+       x="Departure Delay", 
+       y= "Mean of wind speed")
+p2
+```
+
+### 7. Plot the airports as per their geolocation on a world map, by mapping the number flights going to that destionation to the size of the symbol!
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+# Libraries
+library(ggplot2)
+library(dplyr)
+# some standard map packages.
+#install.packages(c("maps", "mapdata"))
+library(maps)
+world <- map_data("world")
+
+airports <- as.data.table(nycflights13::airports)
+airports$dest <- airports$faa
+flights2 <- flight_data[,.(total_flight=.N),by=dest]
+
+df3 <- left_join(flights2,airports,by="dest") 
+
+g <- ggplot(data=world)
+g2 <- g + geom_polygon(mapping=aes(x=long,y=lat,group=group),color="white",fill="grey")
+
+g3 <- g2 + geom_point(data=df3, mapping = aes(x = lon, y = lat,size=total_flight), 
+                      position = "jitter")
+g3
+
+#alternative way
+ggplot()+
+  geom_polygon(
+    data=world,
+    aes(x=long,y=lat,group=group),color="white",fill="grey")+
+  geom_point(merge( airports,
+                    data.table(flight_data)[,.(total_flight=.N),by=.(faa=dest)],
+                    by='faa'),
+             aes(x=lon,y=lat,size=total_flight),
+             color = 'orange')+
+  theme_bw()+
+  xlab('')+ylab('')+
+  theme(legend.position = 'top')+
+  coord_fixed(1.3)
+  
+```
+
+

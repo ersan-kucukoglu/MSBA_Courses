@@ -1,0 +1,100 @@
+---
+title: "DV2-HW2"
+author: "Ersan Kucukoglu"
+date: "1/23/2022"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,message=FALSE,warning=FALSE}
+library(data.table)
+library(ggplot2)
+library(gganimate)
+
+df <- data.table(readRDS('flats.rds'))
+
+# colors that I used "#006D77", "#66B7B0" ,"#EDF6F9"
+```
+## Task 1
+```{r,message=FALSE,warning=FALSE}
+p1 <- ggplot(df, aes(x=Area)) + geom_histogram(binwidth = 5,fill="#006D77",color='white')+
+  labs(title = "Distribution of the Area of flats (m2)")
+p1
+```
+
+## Task 2
+```{r,message=FALSE,warning=FALSE}
+Task2 <- df[!is.na(Condition),Price,by=Condition][order(Price)]
+p2 <- ggplot(Task2, aes(Price, fill = Condition)) +
+  geom_density(alpha = 0.4)+
+  labs(title = 'Price distribution for flats in different condition')
+p2
+
+```
+
+## Task 3
+```{r,message=FALSE,warning=FALSE}
+Task3 <- df[!is.na(Condition),.(Area,Price),by=Condition][order(Price)]
+p3 <- ggplot(Task3, aes(x=Area,y=Price)) + geom_point(alpha=0.5)+
+  geom_smooth(method = lm,se=F,aes(color=Condition))+
+  labs(title = 'How the condition of the flats effects price to area')
+p3
+                                                      
+```
+
+## Task 4
+```{r,message=FALSE,warning=FALSE}
+Task4 <- df[,.(avg_price=mean(Price)),by=.(District)][order(District)]
+p4 <- ggplot(Task4,aes(x=factor(District),y=avg_price))+geom_bar(stat='identity',fill="#006D77")+
+  theme_bw()+labs(title = 'Average Price for each District',x='District',y='Average Price')
+p4
+
+```
+
+## Task 5
+
+```{r,message=FALSE,warning=FALSE}
+p5 <- ggplot(df,aes(factor(District),Price))+
+  geom_boxplot(fill="#006D77",color="#006D77")+
+  theme_bw()
+p5
+
+```
+
+## Task 6
+
+```{r,message=FALSE,warning=FALSE}
+p6 <- ggplot(df,aes(factor(District),Price))+
+  geom_violin(fill="#006D77",color="#006D77")+
+  theme_bw()
+p6
+
+```
+
+## Task 7
+
+```{r,message=FALSE,warning=FALSE}
+library(gganimate)
+
+Task7 <- df[, .(mean_price = mean(Price, na.rm = T), number_of_flats = .N, Price), by = District]
+
+p7 <- ggplot(Task7, aes(Price)) +
+         geom_histogram( fill =  "#006D77", color = '#66B7B0') + 
+         theme_bw() +
+         scale_x_continuous(limits = c(0,1000000), breaks = seq(0,1000000, by = 250000)) +
+         scale_y_continuous(limits = c(0, 500), breaks = seq(0, 500, by = 100)) +
+         transition_states(District) +
+         labs (title = "District {closest_state}", subtitle = paste('Number of flats: {nrow(subset(Task7, District == closest_state))}', 'Mean price: {Task7[District == closest_state, round(mean(Price))]} Ft', sep = " \n "))
+p7
+
+```
+
+
