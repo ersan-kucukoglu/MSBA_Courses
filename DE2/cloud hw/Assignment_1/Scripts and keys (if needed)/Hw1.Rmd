@@ -1,0 +1,81 @@
+---
+title: "DE2 - Cloud Computing Homework 1"
+author: "Ersan Kucukoglu (1904225) / Haaris Afzal Cheema (2100236)"
+date: "11/9/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## a. Key generation for CEU and saving the keys in PEM format
+
+```{r, include=FALSE}
+#call the required package
+library(PKI)
+```
+
+
+```{r}
+
+keypairprovider <- PKI.genRSAkey(bits = 2048L)
+
+prv.pem <- PKI.save.key(keypairprovider, private=TRUE)
+pub.pem <- PKI.save.key(keypairprovider, private=FALSE)
+
+ceu.pub.key <- PKI.load.key(pub.pem)
+ceu.prv.key <- PKI.load.key(prv.pem)
+
+write(pub.pem, file="id_rsa_ceu.pub") 
+write(prv.pem, file="id_rsa_ceu")
+```
+
+By the end of this step, the public key and the private key have been generated, extracted and saved to the disk. The key will be passed to the visitor via a messenger application. The user will then try to encode a message using this public key.
+
+## b. Visitor encrypts a message with CEU’s public key and writes it to disk
+```{r}
+pub.pem.loaded <- scan("id_rsa_ceu.pub", what='list', sep='\n') 
+
+pub.key.loaded <- PKI.load.key(pub.pem.loaded) 
+
+encrypt <- PKI.encrypt(charToRaw("Hello CEU"), pub.key.loaded)
+
+writeBin(encrypt, 'encoded.bin')
+```
+
+By the end of this step, the visitor has scanned the public key sent over messenger and loaded it into his r environment. The visitor then encrypts a message 'Hello CEU' and encodes it with ceu.edu's public key. This encryption is then written into a binary file and sent back to ceu.edu.
+
+## c. CEU reads back its private key from PEM along with the message, decrypts it, and prints to screen.
+
+
+```{r}
+pub.pem.loaded <- scan("id_rsa_ceu.pub", what='list', sep='\n')
+prv.pem.loaded <- scan("id_rsa_ceu", what='list', sep='\n')
+
+# Extracting the key objects from the PEM file
+pub.key.loaded <- PKI.load.key(pub.pem.loaded) 
+prv.key.loaded <- PKI.load.key(prv.pem.loaded)
+```
+
+```{r}
+encrypted_message <- readBin('encoded.bin', what=raw(), n=100000)
+decrypt <- rawToChar(PKI.decrypt(encrypted_message, prv.key.loaded))
+decrypt
+```
+
+CEU uses the previously loaded private key to decrypt the encrypted message. As the output shows the actual characters and no encryption, it shows that the decryption has been done succesfully. 
+
+## d. ceu.edu-s public key in PEM format (pvt key added too)
+
+```{r}
+print(pub.pem)
+
+```
+
+
+```{r}
+print(prv.pem)
+```
+
+
